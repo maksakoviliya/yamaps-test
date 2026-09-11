@@ -9,9 +9,6 @@ use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
 {
-    /**
-     * The only account in the app — there is no registration.
-     */
     public function run(): void
     {
         User::factory()->create([
