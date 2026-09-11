@@ -15,10 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-	/**
-	 * @throws ValidationException
-	 */
-	public function login(LoginRequest $request, LoginUser $action): UserResource
+    /**
+     * @throws ValidationException
+     */
+    public function login(LoginRequest $request, LoginUser $action): UserResource
     {
         return new UserResource($action($request, $request->validated()));
     }

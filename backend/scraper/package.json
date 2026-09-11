@@ -1,0 +1,15 @@
+{
+    "name": "yandex-maps-scraper",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Headless-browser scraper for a Yandex Maps organization card: rating, counts, reviews.",
+    "type": "commonjs",
+    "main": "scrape.js",
+    "scripts": {
+        "scrape": "node scrape.js",
+        "test": "node test/verify.js"
+    },
+    "dependencies": {
+        "puppeteer": "^25.10.0"
+    }
+}

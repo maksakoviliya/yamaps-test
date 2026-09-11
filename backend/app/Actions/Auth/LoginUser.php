@@ -11,10 +11,11 @@ use Illuminate\Validation\ValidationException;
 
 class LoginUser
 {
-	/**
-	 * @param array{email: string, password: string} $credentials
-	 * @throws ValidationException
-	 */
+    /**
+     * @param  array{email: string, password: string}  $credentials
+     *
+     * @throws ValidationException
+     */
     public function __invoke(Request $request, array $credentials): Authenticatable
     {
         if (! Auth::guard('web')->attempt($credentials, remember: true)) {
