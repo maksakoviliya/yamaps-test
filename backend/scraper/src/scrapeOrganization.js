@@ -15,6 +15,7 @@ async function scrapeOrganization(url, config, onProgress) {
     const browser = await puppeteer.launch({
         headless: config.headless,
         args: buildLaunchArgs(config),
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     });
 
     try {

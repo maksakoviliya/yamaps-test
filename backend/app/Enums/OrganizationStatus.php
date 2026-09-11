@@ -16,4 +16,12 @@ enum OrganizationStatus: string
     {
         return __('scraper.status.'.$this->value);
     }
+
+    public function isInProgress(): bool
+    {
+        return match ($this) {
+            self::Pending, self::Parsing, self::BlockedRetry => true,
+            self::Ready, self::Failed => false,
+        };
+    }
 }

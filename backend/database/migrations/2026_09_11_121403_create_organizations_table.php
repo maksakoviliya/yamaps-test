@@ -12,9 +12,9 @@ return new class extends Migration
     {
         Schema::create('organizations', function (Blueprint $table): void {
             $table->ulid('id')->primary();
-            $table->foreignUlid('user_id')->unique()->constrained()->cascadeOnDelete();
+            $table->foreignUlid('user_id')->constrained()->cascadeOnDelete();
 
-            $table->string('yandex_url');
+            $table->string('url');
             $table->string('yandex_business_id')->nullable()->index();
             $table->string('name')->nullable();
 
@@ -23,7 +23,6 @@ return new class extends Migration
             $table->unsignedInteger('reviews_count')->nullable();
 
             $table->string('status')->default('pending');
-            $table->string('last_status_message')->nullable();
 
             $table->unsignedInteger('progress_current')->nullable();
             $table->unsignedInteger('progress_total')->nullable();

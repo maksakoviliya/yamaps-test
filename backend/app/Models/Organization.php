@@ -19,14 +19,13 @@ class Organization extends Model
 
     protected $fillable = [
         'user_id',
-        'yandex_url',
+        'url',
         'yandex_business_id',
         'name',
         'avg_rating',
         'ratings_count',
         'reviews_count',
         'status',
-        'last_status_message',
         'progress_current',
         'progress_total',
         'last_attempt',

@@ -22,14 +22,13 @@ class OrganizationFactory extends Factory
 
         return [
             'user_id' => User::factory(),
-            'yandex_url' => "https://yandex.ru/maps/org/{$businessId}/",
+            'url' => "https://yandex.ru/maps/org/{$businessId}/",
             'yandex_business_id' => $businessId,
             'name' => $this->faker->company(),
             'avg_rating' => $this->faker->randomFloat(2, 3, 5),
             'ratings_count' => $this->faker->numberBetween(50, 6000),
             'reviews_count' => $this->faker->numberBetween(10, 600),
             'status' => OrganizationStatus::Ready,
-            'last_status_message' => null,
             'progress_current' => null,
             'progress_total' => null,
             'last_attempt' => 1,
