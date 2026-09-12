@@ -100,6 +100,8 @@ class ParseOrganizationReviewsTest extends TestCase
 
         $organization->refresh();
         $this->assertSame(OrganizationStatus::BlockedRetry, $organization->status);
+        $this->assertNull($organization->progress_current);
+        $this->assertNull($organization->progress_total);
     }
 
     public function test_markup_changed_fails_the_organization_without_rethrowing(): void
@@ -114,5 +116,7 @@ class ParseOrganizationReviewsTest extends TestCase
         $organization->refresh();
         $this->assertSame(OrganizationStatus::Failed, $organization->status);
         $this->assertSame('Структура ответа изменилась.', $organization->last_error_message);
+        $this->assertNull($organization->progress_current);
+        $this->assertNull($organization->progress_total);
     }
 }

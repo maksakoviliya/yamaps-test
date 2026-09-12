@@ -432,11 +432,24 @@ async function scrollUntilDone(page, state, config, onProgress) {
 
 async function scrollReviewsPanel(page, deltaY) {
     await page.evaluate((delta) => {
+        // Yandex's own reviews panel — scrolling it is what triggers the
+        // paginated `/fetchReviews?page=N` calls. Prefer it by its stable
+        // class name; the generic fallback below no longer caps candidate
+        // width, since the real panel legitimately takes up most of the
+        // viewport (a `< 60% of window width` cap used to reject it outright,
+        // so scrolling silently fell back to `window.scrollBy` — which
+        // scrolls nothing, because the panel scrolls independently of the
+        // window — and no page past the first ever loaded).
+        const explicit = document.querySelector('.scroll__container');
+
+        if (explicit) {
+            explicit.scrollTop += delta;
+
+            return;
+        }
+
         const candidates = Array.from(document.querySelectorAll('div')).filter(
-            (el) =>
-                el.scrollHeight - el.clientHeight > 200 &&
-                el.clientHeight > 300 &&
-                el.clientWidth < window.innerWidth * 0.6
+            (el) => el.scrollHeight - el.clientHeight > 200 && el.clientHeight > 300
         );
 
         const target = candidates.sort(
@@ -486,11 +499,24 @@ function mapReview(review) {
     return {
         externalReviewId: review.reviewId,
         authorName: review.author?.name ?? 'Аноним',
-        authorAvatarUrl: review.author?.avatarUrl ?? null,
+        authorAvatarUrl: resolveAvatarUrl(review.author?.avatarUrl),
         rating: review.rating ?? null,
         text: review.text ?? '',
         publishedAt: review.updatedTime ?? null,
     };
+}
+
+/**
+ * Yandex avatar URLs are templates with a literal `{size}` placeholder
+ * (e.g. `.../get-yapic/38663/0b-9/{size}`) — stored as-is they're broken
+ * image links. Resolve it once here so the DB always holds a usable URL.
+ */
+function resolveAvatarUrl(url) {
+    if (!url) {
+        return null;
+    }
+
+    return url.replace('{size}', '64x64');
 }
 
 function jitter(min, max) {
@@ -509,4 +535,5 @@ module.exports = {
     toReviewsUrl,
     findBusinessStackItem,
     seedStateFromEmbeddedItem,
+    resolveAvatarUrl,
 };

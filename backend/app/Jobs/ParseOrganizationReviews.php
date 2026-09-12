@@ -18,6 +18,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ParseOrganizationReviews implements ShouldQueue
 {
@@ -76,9 +77,11 @@ class ParseOrganizationReviews implements ShouldQueue
             $this->organization->update([
                 'status' => OrganizationStatus::BlockedRetry,
                 'last_error_message' => $e->getMessage(),
+                'progress_current' => null,
+                'progress_total' => null,
             ]);
 
-            Log::channel('scraper')->warning('Яндекс заблокировал запрос парсинга', [
+            Log::channel('scraper')->warning($e->getMessage(), [
                 'organization_id' => $this->organization->id,
                 'attempt' => $this->attempts(),
                 'details' => $e->details,
@@ -92,19 +95,21 @@ class ParseOrganizationReviews implements ShouldQueue
         }
     }
 
-    public function failed(\Throwable $e): void
+    public function failed(Throwable $e): void
     {
         $this->markFailed($e);
     }
 
-    private function markFailed(\Throwable $e): void
+    private function markFailed(Throwable $e): void
     {
         $this->organization->update([
             'status' => OrganizationStatus::Failed,
             'last_error_message' => $e->getMessage(),
+            'progress_current' => null,
+            'progress_total' => null,
         ]);
 
-        Log::channel('scraper')->error('Парсинг организации завершился ошибкой', [
+        Log::channel('scraper')->error($e->getMessage(), [
             'organization_id' => $this->organization->id,
             'attempt' => $this->attempts(),
             'exception' => $e::class,

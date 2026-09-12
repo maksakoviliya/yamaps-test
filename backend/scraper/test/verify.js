@@ -17,6 +17,7 @@ const {
     toReviewsUrl,
     findBusinessStackItem,
     seedStateFromEmbeddedItem,
+    resolveAvatarUrl,
 } = require('../src/scrapeOrganization');
 
 const realReview = {
@@ -71,6 +72,19 @@ test('mapReview extracts the fields the DB needs', () => {
     assert.equal(mapped.authorName, 'Ася А');
     assert.equal(mapped.rating, 3);
     assert.equal(mapped.publishedAt, '2026-04-20T18:09:42.166Z');
+    assert.equal(mapped.authorAvatarUrl, 'https://avatars.mds.yandex.net/get-yapic/36777/0b-5/64x64');
+});
+
+test('resolveAvatarUrl fills in Yandex\'s `{size}` URL template placeholder', () => {
+    assert.equal(
+        resolveAvatarUrl('https://avatars.mds.yandex.net/get-yapic/36777/0b-5/{size}'),
+        'https://avatars.mds.yandex.net/get-yapic/36777/0b-5/64x64'
+    );
+});
+
+test('resolveAvatarUrl tolerates a missing avatar', () => {
+    assert.equal(resolveAvatarUrl(null), null);
+    assert.equal(resolveAvatarUrl(undefined), null);
 });
 
 test('mapReview tolerates a missing author', () => {

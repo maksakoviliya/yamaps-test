@@ -12,7 +12,7 @@ class ListReviews
 {
     public function __invoke(Organization $organization, Request $request): LengthAwarePaginator
     {
-        $perPage = min(max($request->integer('per_page', 50), 1), 100);
+        $perPage = min(max($request->integer('per_page', 10), 1), 100);
 
         return $organization->reviews()
             ->orderByDesc('published_at')
