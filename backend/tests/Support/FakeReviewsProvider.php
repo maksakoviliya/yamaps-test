@@ -8,14 +8,17 @@ use App\Services\Reviews\ReviewsFetchResult;
 use App\Services\Reviews\ReviewsProviderInterface;
 use Throwable;
 
-class FakeReviewsProvider implements ReviewsProviderInterface
+readonly class FakeReviewsProvider implements ReviewsProviderInterface
 {
     public function __construct(
-        private readonly ?ReviewsFetchResult $result = null,
-        private readonly ?Throwable $throws = null,
+        private ?ReviewsFetchResult $result = null,
+        private ?Throwable $throws = null,
     ) {}
 
-    public function fetch(string $url, callable $onProgress): ReviewsFetchResult
+	/**
+	 * @throws Throwable
+	 */
+	public function fetch(string $url, callable $onProgress): ReviewsFetchResult
     {
         $onProgress(0, 2);
 

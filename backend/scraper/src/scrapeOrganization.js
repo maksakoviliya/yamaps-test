@@ -27,9 +27,21 @@ async function scrapeOrganization(url, config, onProgress) {
         });
 
         const state = attachResponseCollector(page);
+        const requestedTld = topLevelDomain(url);
 
-        await openReviewsTab(page, url, config);
-        await waitForFirstReviewsResponse(page, state, config);
+        await openReviewsTab(page, url, config, requestedTld);
+
+        // Yandex renders the first page of reviews (up to 50) straight into the
+        // page's SSR hydration state — no `/fetchReviews` XHR happens for it at
+        // all. Only later pages (loaded on scroll) go through the network and
+        // get picked up by attachResponseCollector. Without this, orgs whose
+        // review count fits on one page never fire the XHR we wait for below,
+        // so we'd time out despite the reviews being right there in the DOM.
+        seedStateFromEmbeddedItem(state, findBusinessStackItem(await extractEmbeddedBusinessState(page)));
+
+        if (!state.lastParams) {
+            await waitForFirstReviewsResponse(page, state, config, requestedTld);
+        }
 
         const business = await extractBusinessSummary(page, state);
         await scrollUntilDone(page, state, config, onProgress);
@@ -67,6 +79,8 @@ function attachResponseCollector(page) {
         ratingData: null,
         blocked: false,
         lastReviewsResponseAt: 0,
+        lastReviewsPayload: null,
+        blockedPayload: null,
     };
 
     page.on('response', (response) => {
@@ -97,8 +111,11 @@ async function handleFetchReviewsResponse(response, state) {
         return;
     }
 
+    state.lastReviewsPayload = json;
+
     if (isBlockedPayload(json)) {
         state.blocked = true;
+        state.blockedPayload = json;
 
         return;
     }
@@ -189,10 +206,83 @@ function isBlockedPayload(json) {
     return BLOCK_MARKERS.some((marker) => text.includes(marker.toLowerCase()));
 }
 
-/** Navigates to the given URL, then to its canonical `/reviews/` deep link. */
-async function openReviewsTab(page, url, config) {
-    const requestedTld = topLevelDomain(url);
+/**
+ * Reads the SPA's own SSR hydration payload — the same state React hydrates
+ * from, embedded as `<script type="application/json" class="state-view">`.
+ */
+async function extractEmbeddedBusinessState(page) {
+    return page.evaluate(() => {
+        const el = document.querySelector('script.state-view');
 
+        if (!el) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(el.textContent);
+        } catch {
+            return null;
+        }
+    });
+}
+
+/** Finds the business card entry in the hydration state's result stack. */
+function findBusinessStackItem(embeddedState) {
+    const stack = embeddedState?.stack;
+
+    if (!Array.isArray(stack)) {
+        return null;
+    }
+
+    for (const entry of stack) {
+        const item = entry?.results?.items?.[0];
+
+        if (item?.type === 'business') {
+            return item;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Seeds collector state from the embedded business item so the rest of the
+ * pipeline (wait/scroll/build) treats it exactly like data collected from
+ * `/fetchReviews` — the shapes match field for field.
+ */
+function seedStateFromEmbeddedItem(state, item) {
+    if (!item) {
+        return;
+    }
+
+    if (item.id) {
+        state.businessId = item.id;
+    }
+
+    if (item.ratingData) {
+        state.ratingData = item.ratingData;
+    }
+
+    const reviewResults = item.reviewResults;
+
+    if (!reviewResults) {
+        return;
+    }
+
+    for (const review of reviewResults.reviews ?? []) {
+        if (review?.reviewId) {
+            state.reviewsById.set(review.reviewId, review);
+        }
+    }
+
+    if (reviewResults.params) {
+        state.lastParams = reviewResults.params;
+        state.lastReviewsResponseAt = Date.now();
+    }
+}
+
+/** Navigates to the given URL, then to its canonical `/reviews/` deep link. */
+async function openReviewsTab(page, url, config, requestedTld) {
     try {
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: config.navigationTimeoutMs });
     } catch (error) {
@@ -260,17 +350,23 @@ async function assertNotBlocked(page) {
     const lowered = bodyText.toLowerCase();
 
     if (BLOCK_MARKERS.some((marker) => lowered.includes(marker.toLowerCase()))) {
-        throw new ScraperError('BLOCKED', 'Яндекс запросил капчу — запрос выглядит подозрительно для антибот-защиты.');
+        throw new ScraperError('BLOCKED', 'Яндекс запросил капчу — запрос выглядит подозрительно для антибот-защиты.', {
+            pageText: bodyText,
+        });
     }
 }
 
-async function waitForFirstReviewsResponse(page, state, config) {
+async function waitForFirstReviewsResponse(page, state, config, requestedTld) {
     const deadline = Date.now() + config.navigationTimeoutMs;
 
     while (Date.now() < deadline) {
         if (state.blocked) {
-            throw new ScraperError('BLOCKED', 'Яндекс временно заблокировал автоматические запросы.');
+            throw new ScraperError('BLOCKED', 'Яндекс временно заблокировал автоматические запросы.', {
+                response: state.blockedPayload,
+            });
         }
+
+        assertSameRegion(page, requestedTld);
 
         if (state.lastParams) {
             return;
@@ -279,13 +375,19 @@ async function waitForFirstReviewsResponse(page, state, config) {
         await sleep(300);
     }
 
-    const notFound = await page.evaluate(() => document.body?.innerText?.includes('Ничего не найдено') ?? false);
+    const bodyText = await page.evaluate(() => document.body?.innerText ?? '');
 
-    if (notFound) {
-        throw new ScraperError('NOT_FOUND', 'Организация по этой ссылке не найдена.');
+    if (bodyText.includes('Ничего не найдено')) {
+        throw new ScraperError('NOT_FOUND', 'Организация по этой ссылке не найдена.', {
+            pageUrl: page.url(),
+            pageText: bodyText,
+        });
     }
 
-    throw new ScraperError('TIMEOUT', 'Яндекс.Карты не ответили вовремя.');
+    throw new ScraperError('TIMEOUT', 'Яндекс.Карты не ответили вовремя.', {
+        pageUrl: page.url(),
+        pageText: bodyText,
+    });
 }
 
 async function extractBusinessSummary(page, state) {
@@ -306,7 +408,9 @@ async function scrollUntilDone(page, state, config, onProgress) {
 
     while (state.reviewsById.size < target && stalledScrolls < config.maxStalledScrolls) {
         if (state.blocked) {
-            throw new ScraperError('BLOCKED', 'Яндекс временно заблокировал автоматические запросы во время скролла.');
+            throw new ScraperError('BLOCKED', 'Яндекс временно заблокировал автоматические запросы во время скролла.', {
+                response: state.blockedPayload,
+            });
         }
 
         const sizeBefore = state.reviewsById.size;
@@ -354,11 +458,14 @@ function buildResult(business, state) {
         if (state.lastParams?.count > 0) {
             throw new ScraperError(
                 'MARKUP_CHANGED',
-                'Источник сообщает о наличии отзывов, но ни один не удалось распарсить — вероятно, изменилась структура ответа.'
+                'Источник сообщает о наличии отзывов, но ни один не удалось распарсить — вероятно, изменилась структура ответа.',
+                { response: state.lastReviewsPayload, lastParams: state.lastParams }
             );
         }
 
-        throw new ScraperError('EMPTY_RESPONSE', 'Яндекс.Карты вернули пустой список отзывов.');
+        throw new ScraperError('EMPTY_RESPONSE', 'Яндекс.Карты вернули пустой список отзывов.', {
+            response: state.lastReviewsPayload,
+        });
     }
 
     return {
@@ -394,4 +501,12 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-module.exports = { scrapeOrganization, mapReview, findRatingData, buildResult, toReviewsUrl };
+module.exports = {
+    scrapeOrganization,
+    mapReview,
+    findRatingData,
+    buildResult,
+    toReviewsUrl,
+    findBusinessStackItem,
+    seedStateFromEmbeddedItem,
+};

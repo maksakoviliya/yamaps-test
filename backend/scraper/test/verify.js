@@ -10,7 +10,14 @@
 // next best thing for verifying the parsing logic itself.
 
 const assert = require('node:assert/strict');
-const { mapReview, findRatingData, buildResult, toReviewsUrl } = require('../src/scrapeOrganization');
+const {
+    mapReview,
+    findRatingData,
+    buildResult,
+    toReviewsUrl,
+    findBusinessStackItem,
+    seedStateFromEmbeddedItem,
+} = require('../src/scrapeOrganization');
 
 const realReview = {
     reviewId: '7bAdihCvDkYDnPv040XPxtmpoK81-b1',
@@ -38,6 +45,23 @@ const realParams = {
     page: 1,
     totalPages: 44,
     reviewsRemained: 2129,
+};
+
+// The first page of reviews (up to 50) never hits the network — it's baked
+// into `<script class="state-view">`, Yandex's own SSR hydration payload.
+// Shape captured from a real org page's embedded state.
+const realBusinessStackItem = {
+    type: 'business',
+    id: realSearchItemWithRating.id,
+    ratingData: realSearchItemWithRating.ratingData,
+    reviewResults: {
+        reviews: [realReview],
+        params: realParams,
+    },
+};
+
+const realEmbeddedState = {
+    stack: [{ results: { items: [realBusinessStackItem] } }],
 };
 
 test('mapReview extracts the fields the DB needs', () => {
@@ -110,6 +134,42 @@ test('toReviewsUrl is a no-op on an already-canonical reviews URL', () => {
         toReviewsUrl('https://yandex.ru/maps/org/kofemaniya/1364580496/reviews/'),
         'https://yandex.ru/maps/org/kofemaniya/1364580496/reviews/'
     );
+});
+
+test('findBusinessStackItem finds the business entry in the hydration state stack', () => {
+    assert.deepEqual(findBusinessStackItem(realEmbeddedState), realBusinessStackItem);
+});
+
+test('findBusinessStackItem skips non-business stack entries', () => {
+    const state = { stack: [{ results: { items: [{ type: 'geo' }] } }, { results: { items: [realBusinessStackItem] } }] };
+
+    assert.deepEqual(findBusinessStackItem(state), realBusinessStackItem);
+});
+
+test('findBusinessStackItem returns null when there is no embedded state', () => {
+    assert.equal(findBusinessStackItem(null), null);
+    assert.equal(findBusinessStackItem({ stack: [] }), null);
+});
+
+test('seedStateFromEmbeddedItem seeds reviews, rating and pagination params straight from SSR data', () => {
+    const state = { reviewsById: new Map(), lastParams: null, businessId: null, ratingData: null, lastReviewsResponseAt: 0 };
+
+    seedStateFromEmbeddedItem(state, realBusinessStackItem);
+
+    assert.equal(state.businessId, realSearchItemWithRating.id);
+    assert.deepEqual(state.ratingData, realSearchItemWithRating.ratingData);
+    assert.deepEqual(state.lastParams, realParams);
+    assert.equal(state.reviewsById.get(realReview.reviewId), realReview);
+    assert.ok(state.lastReviewsResponseAt > 0);
+});
+
+test('seedStateFromEmbeddedItem is a no-op when no business item was found', () => {
+    const state = { reviewsById: new Map(), lastParams: null, businessId: null, ratingData: null, lastReviewsResponseAt: 0 };
+
+    seedStateFromEmbeddedItem(state, null);
+
+    assert.equal(state.lastParams, null);
+    assert.equal(state.reviewsById.size, 0);
 });
 
 function test(name, fn) {
