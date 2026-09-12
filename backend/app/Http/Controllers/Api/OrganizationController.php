@@ -23,9 +23,9 @@ class OrganizationController extends Controller
 
     public function store(StoreOrganizationRequest $request, ConnectOrganization $action): OrganizationResource
     {
-        $organization = $action($request->user(), $request->validated('url'));
-
-        return new OrganizationResource($organization);
+        return new OrganizationResource(
+	        $action($request->user(), $request->validated('url'))
+        );
     }
 
     public function show(Organization $organization): OrganizationResource
