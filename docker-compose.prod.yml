@@ -13,6 +13,7 @@ services:
       DB_PORT: 3306
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      HOME: /tmp
     depends_on:
       - mysql
       - redis
@@ -33,6 +34,7 @@ services:
       DB_PORT: 3306
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      HOME: /tmp
     depends_on:
       - mysql
       - redis
