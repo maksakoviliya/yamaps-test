@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git unzip libzip-dev libicu-dev libonig-dev \
         curl gnupg ca-certificates chromium fonts-liberation \
     && docker-php-ext-install pdo_mysql zip bcmath intl opcache \
+    && pecl channel-update pecl.php.net \
     && pecl install redis && docker-php-ext-enable redis \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
