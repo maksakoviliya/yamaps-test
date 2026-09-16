@@ -2,6 +2,7 @@ services:
   app:
     build:
       context: ./backend
+    image: yamaps-test-app:prod
     volumes:
       - ./backend:/var/www
     env_file:
@@ -19,6 +20,7 @@ services:
   queue-worker:
     build:
       context: ./backend
+    image: yamaps-test-app:prod
     command: php artisan queue:work --queue=scraping,default --tries=3 --sleep=1
     volumes:
       - ./backend:/var/www
