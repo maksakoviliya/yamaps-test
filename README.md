@@ -87,7 +87,6 @@ node scrape.js "https://yandex.ru/maps/org/.../..."
 | `FRONTEND_URL`, `SANCTUM_STATEFUL_DOMAINS` | откуда разрешён stateful SPA-логин (CORS + Sanctum) |
 | `DB_*`, `REDIS_*` | подключение к MySQL/Redis; при `docker compose` хосты переопределяются самим compose-файлом |
 | `SCRAPER_NODE_BINARY` | путь к `node` (по умолчанию просто `node` из `$PATH`) |
-| `SCRAPER_MAX_REVIEWS` | сколько отзывов максимум собирать за один прогон (по умолчанию 600 — оценка Яндекса по ТЗ) |
 | `SCRAPER_NAVIGATION_TIMEOUT_MS` / `SCRAPER_TOTAL_TIMEOUT_MS` | таймаут на открытие страницы / на весь прогон |
 | `SCRAPER_MIN_DELAY_MS` / `SCRAPER_MAX_DELAY_MS` | джиттер задержки между скроллами (анти-бан) |
 | `SCRAPER_MAX_STALLED_SCROLLS` | сколько скроллов подряд без новых данных считать концом ленты |

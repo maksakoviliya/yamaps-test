@@ -401,7 +401,7 @@ async function extractBusinessSummary(page, state) {
 }
 
 async function scrollUntilDone(page, state, config, onProgress) {
-    const target = Math.min(config.maxReviews, state.lastParams?.count ?? config.maxReviews);
+    const target = state.lastParams?.count ?? Infinity;
     let stalledScrolls = 0;
 
     onProgress(state.reviewsById.size, target);

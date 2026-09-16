@@ -28,7 +28,6 @@ class AppServiceProvider extends ServiceProvider
                 scriptPath: $config['script_path'],
                 nodeBinary: $config['node_binary'],
                 env: [
-                    'SCRAPER_MAX_REVIEWS' => $config['max_reviews'],
                     'SCRAPER_NAVIGATION_TIMEOUT_MS' => $config['navigation_timeout_ms'],
                     'SCRAPER_TOTAL_TIMEOUT_MS' => $config['total_timeout_ms'],
                     'SCRAPER_MIN_DELAY_MS' => $config['min_delay_ms'],

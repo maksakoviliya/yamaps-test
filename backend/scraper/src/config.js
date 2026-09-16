@@ -30,7 +30,6 @@ function loadConfig() {
     const proxies = listEnv('SCRAPER_PROXIES');
 
     return {
-        maxReviews: intEnv('SCRAPER_MAX_REVIEWS', 600),
         navigationTimeoutMs: intEnv('SCRAPER_NAVIGATION_TIMEOUT_MS', 30_000),
         totalTimeoutMs: intEnv('SCRAPER_TOTAL_TIMEOUT_MS', 180_000),
         minDelayMs: intEnv('SCRAPER_MIN_DELAY_MS', 700),
