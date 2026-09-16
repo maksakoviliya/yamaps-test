@@ -416,7 +416,7 @@ async function scrollUntilDone(page, state, config, onProgress) {
         const sizeBefore = state.reviewsById.size;
         const lastResponseBefore = state.lastReviewsResponseAt;
 
-        await scrollReviewsPanel(page, 1400);
+        await scrollReviewsPanel(page);
         await sleep(jitter(config.minDelayMs, config.maxDelayMs));
 
         const gotNewData = state.lastReviewsResponseAt !== lastResponseBefore && state.reviewsById.size > sizeBefore;
@@ -430,8 +430,8 @@ async function scrollUntilDone(page, state, config, onProgress) {
     }
 }
 
-async function scrollReviewsPanel(page, deltaY) {
-    await page.evaluate((delta) => {
+async function scrollReviewsPanel(page) {
+    await page.evaluate(() => {
         // Yandex's own reviews panel — scrolling it is what triggers the
         // paginated `/fetchReviews?page=N` calls. Prefer it by its stable
         // class name; the generic fallback below no longer caps candidate
@@ -440,10 +440,18 @@ async function scrollReviewsPanel(page, deltaY) {
         // so scrolling silently fell back to `window.scrollBy` — which
         // scrolls nothing, because the panel scrolls independently of the
         // window — and no page past the first ever loaded).
+        //
+        // The next page's XHR is only triggered once `scrollTop` reaches the
+        // very bottom of the currently rendered content (a sentinel-based
+        // infinite-scroll trigger, not a "scrolled far enough" heuristic) —
+        // a fixed small scroll delta per step never gets there before
+        // `maxStalledScrolls` gives up, so we jump straight to the bottom
+        // instead. `scrollHeight` grows after each page loads, so the next
+        // jump lands on the new bottom and re-triggers the next page.
         const explicit = document.querySelector('.scroll__container');
 
         if (explicit) {
-            explicit.scrollTop += delta;
+            explicit.scrollTop = explicit.scrollHeight;
 
             return;
         }
@@ -457,11 +465,11 @@ async function scrollReviewsPanel(page, deltaY) {
         )[0];
 
         if (target) {
-            target.scrollTop += delta;
+            target.scrollTop = target.scrollHeight;
         } else {
-            window.scrollBy(0, delta);
+            window.scrollTo(0, document.body.scrollHeight);
         }
-    }, deltaY);
+    });
 }
 
 function buildResult(business, state) {
