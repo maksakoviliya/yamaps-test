@@ -5,6 +5,7 @@ services:
     image: yamaps-test-app:prod
     volumes:
       - backend-app-storage:/var/www/storage
+      - ./backend/.env:/var/www/.env
     env_file:
       - ./backend/.env
     environment:
@@ -24,6 +25,7 @@ services:
     command: php artisan queue:work --queue=scraping,default --tries=3 --sleep=1
     volumes:
       - backend-queue-storage:/var/www/storage
+      - ./backend/.env:/var/www/.env
     env_file:
       - ./backend/.env
     environment:
