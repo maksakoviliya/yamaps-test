@@ -4,7 +4,7 @@ services:
       context: ./backend
     image: yamaps-test-app:prod
     volumes:
-      - ./backend:/var/www
+      - backend-storage:/var/www/storage
     env_file:
       - ./backend/.env
     environment:
@@ -23,7 +23,7 @@ services:
     image: yamaps-test-app:prod
     command: php artisan queue:work --queue=scraping,default --tries=3 --sleep=1
     volumes:
-      - ./backend:/var/www
+      - backend-storage:/var/www/storage
     env_file:
       - ./backend/.env
     environment:
@@ -78,3 +78,4 @@ services:
 volumes:
   mysql-data:
   redis-data:
+  backend-storage:
